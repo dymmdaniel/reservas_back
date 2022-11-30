@@ -12,13 +12,10 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RestController
-@RequestMapping("/user")
+@RequestMapping("/api/user")
 @Slf4j
 public class UserController {
 
@@ -54,12 +51,38 @@ public class UserController {
             Rol rol = rolService.find((long) 1); //Rol por defecto
             user.setRol(rol);
         }
+        User userExist = userService.findByEmail(user.getEmail());
+        if(userExist != null){
+            log.info("El usuario ya existe.");
+            return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body("El correo ya existe");
+        }
         User userEntity = userService.save(user);
         return ResponseEntity.status(HttpStatus.CREATED).body(userEntity);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<?> editUser(@PathVariable Long id,@Valid @RequestBody User user, BindingResult result){
+        if(result.hasErrors()){
+            return this.validar(result);
+        }
+        User userExist = userService.find(id);
+        if(userExist == null){
+            return ResponseEntity.notFound().build();
+        }
+        log.info(user.getRol().getDescription());
+        User usr = userExist;
+        usr.setCompany(user.getCompany());
+        usr.setRol(user.getRol());
+        usr.setEmail(user.getEmail());
+        usr.setPassword(user.getPassword());
+        usr.setFirstName(user.getFirstName());
+        usr.setLastName(user.getLastName());
+        usr.setPhone(user.getPhone());
+        return ResponseEntity.status(HttpStatus.CREATED).body(userService.save(usr));
+    }
+
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable Long id){
+    public ResponseEntity<?> deleteUser(@PathVariable Long id){
         userService.delete(id);
         return ResponseEntity.noContent().build();
     }
