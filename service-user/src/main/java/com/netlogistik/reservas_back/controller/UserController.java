@@ -1,5 +1,6 @@
 package com.netlogistik.reservas_back.controller;
 
+import com.github.cliftonlabs.json_simple.JsonObject;
 import com.netlogistik.reservas_back.model.Rol;
 import com.netlogistik.reservas_back.model.User;
 import com.netlogistik.reservas_back.service.RolService;
@@ -12,7 +13,11 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.util.*;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/user")
@@ -24,6 +29,8 @@ public class UserController {
 
     @Autowired
     private RolService rolService;
+
+    JsonObject json = new JsonObject();
 
     @GetMapping("/")
     public ResponseEntity<List<User>> listUser(){
@@ -46,18 +53,24 @@ public class UserController {
         if(result.hasErrors()){
             return this.validar(result);
         }
+        User userExist = userService.findByEmail(user.getEmail());
+        if(userExist != null){
+            log.info("El usuario ya existe.");
+            json.put("statusText", HttpStatus.BAD_REQUEST);
+            json.put("status", HttpStatus.BAD_REQUEST.value());
+            return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body(json);
+        }
+
         if(user.getRol()==null){
             log.info("Se crea el rol por defecto nivel USER");
             Rol rol = rolService.find((long) 1); //Rol por defecto
             user.setRol(rol);
         }
-        User userExist = userService.findByEmail(user.getEmail());
-        if(userExist != null){
-            log.info("El usuario ya existe.");
-            return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body("El correo ya existe");
-        }
+        json.put("statusText", HttpStatus.CREATED);
+        json.put("status", HttpStatus.CREATED.value());
+        log.info(user.toString());
         User userEntity = userService.save(user);
-        return ResponseEntity.status(HttpStatus.CREATED).body(userEntity);
+        return ResponseEntity.status(HttpStatus.CREATED).body(json);
     }
 
     @PutMapping("/{id}")
